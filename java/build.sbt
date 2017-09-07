@@ -1,11 +1,40 @@
 name := "enry-java"
-organization := "tech.sourced"
+organization := "co.erizocosmi"
 version := "1.0"
+
+sonatypeProfileName := "co.erizocosmi"
+
+// pom settings for sonatype
+homepage := Some(url("https://github.com/src-d/enry"))
+scmInfo := Some(ScmInfo(url("https://github.com/src-d/enry"),
+                            "git@github.com:src-d/enry.git"))
+developers += Developer("abeaumont",
+                        "Alfredo Beaumont",
+                        "alfredo@sourced.tech",
+                        url("https://github.com/abeaumont"))
+licenses += ("Apache-2.0", url("http://www.apache.org/licenses/LICENSE-2.0"))
+pomIncludeRepository := (_ => false)
 
 crossPaths := false
 autoScalaLibrary := false
 publishMavenStyle := true
 exportJars := true
+useGpg := true
+
+val SONATYPE_USERNAME = scala.util.Properties.envOrElse("SONATYPE_USERNAME", "NOT_SET")
+val SONATYPE_PASSWORD = scala.util.Properties.envOrElse("SONATYPE_PASSWORD", "NOT_SET")
+credentials += Credentials(
+  "Sonatype Nexus Repository Manager", 
+  "oss.sonatype.org", 
+  SONATYPE_USERNAME, 
+  SONATYPE_PASSWORD)
+
+val SONATYPE_PASSPHRASE = scala.util.Properties.envOrElse("SONATYPE_PASSPHRASE", "")
+pgpPassphrase := Some(SONATYPE_PASSPHRASE.toArray)
+
+pgpSecretRing := file("secring.gpg")
+pgpPublicRing := file("pubring.gpg")
+pgpSigningKey := Some(3227044753)
 
 libraryDependencies += "com.novocode" % "junit-interface" % "0.11" % Test
 
