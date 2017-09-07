@@ -25,3 +25,4 @@ target
 .jnaerator
 shared
 *.jar
+*.gpg
