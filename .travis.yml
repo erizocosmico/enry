@@ -7,23 +7,7 @@ go:
 matrix:
   allow_failures:
     - go: tip
-  include:
-    - language: scala
-      jdk: oraclejdk8
-
-      install:
-        - GIMME_OUTPUT=$(gimme 1.8 | tee -a $HOME/.bashrc) && eval "$GIMME_OUTPUT"
-        - export GOPATH=$HOME/gopath
-        - mkdir -p $GOPATH/src/gopkg.in/src-d/enry.v1
-        - rsync -az ${TRAVIS_BUILD_DIR}/ $GOPATH/src/gopkg.in/src-d/enry.v1
-        - go get -v gopkg.in/src-d/enry.v1/...
-
-      before_script:
-        - cd java
-        - make
-
-      script:
-        - make test
+  fast_finish: true
 
 install:
   - rm -rf $GOPATH/src/gopkg.in/src-d
@@ -50,3 +34,95 @@ deploy:
   skip_cleanup: true
   on:
     tags: true
+
+jobs:
+  include:
+    - stage: test
+      language: scala
+      jdk: oraclejdk8
+
+      install:
+        - GIMME_OUTPUT=$(gimme 1.8 | tee -a $HOME/.bashrc) && eval "$GIMME_OUTPUT"
+        - export GOPATH=$HOME/gopath
+        - mkdir -p $GOPATH/src/gopkg.in/src-d/enry.v1
+        - rsync -az ${TRAVIS_BUILD_DIR}/ $GOPATH/src/gopkg.in/src-d/enry.v1
+        - go get -v gopkg.in/src-d/enry.v1/...
+
+      before_script:
+        - cd java
+        - make
+
+      script:
+        - make test
+
+      before_deploy:
+        - cd ..
+
+      deploy:
+        provider: releases
+        api_key:
+          secure: $GITHUB_TOKEN
+        file:
+          - ./.shared/linux-x86-64/libenry.so
+          - ./.shared/libenry.h
+        skip_cleanup: true
+        on:
+          tags: true
+
+#    - stage: test
+#      language: scala
+#      os: osx
+#      osx_image: xcode8.3
+#
+#      install:
+#        - GIMME_OUTPUT=$(gimme 1.8 | tee -a $HOME/.bashrc) && eval "$GIMME_OUTPUT"
+#        - export GOPATH=$HOME/gopath
+#        - mkdir -p $GOPATH/src/gopkg.in/src-d/enry.v1
+#        - rsync -az ${TRAVIS_BUILD_DIR}/ $GOPATH/src/gopkg.in/src-d/enry.v1
+#        - go get -v gopkg.in/src-d/enry.v1/...
+#
+#      before_script:
+#        - cd java
+#        - make
+#
+#      script:
+#        - make test
+#
+#      before_deploy:
+#        - make os-shared-lib
+#        - cd ..
+#
+#      deploy:
+#        provider: releases
+#        api_key:
+#          secure: $GITHUB_TOKEN
+#        file: ./.shared/darwin/libenry.dylib
+#        skip_cleanup: true
+#        on:
+#          tags: true
+
+    - stage: publishmaven
+      language: scala
+      jdk: oraclejdk8
+
+      before_script:
+        - cd java
+        - make
+        - curl -o ./shared/linux-x86-64/libenry.so -sL "https://github.com/$TRAVIS_REPO_SLUG/releases/download/$TRAVIS_TAG/libenry.so"
+
+      script:
+        - make test # ensure the shared objects are functional
+        - ./sbt publishLocal
+        - rm ./target/enry-java-*-javadoc.jar
+        - rm ./target/enry-java-*-sources.jar
+        - rm ./target/enry-java-*-tests.jar
+
+      deploy:
+        provider: releases
+        api_key:
+          secure: $GITHUB_TOKEN
+        file_glob: true
+        file: ./target/enry-java*.jar
+        skip_cleanup: true
+        on:
+          tags: true
